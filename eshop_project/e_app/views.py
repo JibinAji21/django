@@ -1,6 +1,10 @@
 from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate,login,logout
 from .models import *
+import os
+from django.contrib.auth.models import User
+from django.contrib import messages
+
 
 # Create your views here.
 
@@ -17,6 +21,9 @@ def shop_login(req):
                 login(req,data)
                 req.session['shop']=uname
                 return redirect(shop_home)
+            else:
+                messages.warning(req,'invalid username or password')
+                return redirect(shop_login)
         return render(req,'login.html')
 
 def shop_logout(req):
@@ -44,18 +51,52 @@ def add_product(req):
 
 def edit_product(req,id):
     pro=Product.objects.get(pk=id)
-    e_id=req.POST['pro_id']
-    name=req.POST['name']
-    price=req.POST['price']
-    offer_price=req.POST['o_price']
-    file=req.FILES.get('img')
-    print(file)
-    if file:
-        Product.objects.filter(pk=id).update(product_id=e_id,product_name=name,price=price,offer_price=offer_price,img=file)
-    else:
-        Product.objects.filter(pk=id).update(product_id=e_id,product_name=name,price=price,offer_price=offer_price)
+    if req.method=='POST':
+
+        e_id=req.POST['pro_id']
+        name=req.POST['name']
+        price=req.POST['price']
+        offer_price=req.POST['o_price']
+        file=req.FILES.get('img')
+        print(file)
+        if file:
+            Product.objects.filter(pk=id).update(product_id=e_id,product_name=name,price=price,offer_price=offer_price,img=file)
+        else:
+            Product.objects.filter(pk=id).update(product_id=e_id,product_name=name,price=price,offer_price=offer_price)
+        return redirect(shop_home)
+    return render(req,'shop/edit_product.html',{'data:pro'})
+
+def delete_product(req,id):
+    data=Product.objects.get(pk=id)
+    url=data.img.url
+    url=url.split('/')[-1]
+    os.remove('media/'+url)
+    data.delete()
     return redirect(shop_home)
-return render(req,'shop/edit_product.html',{'data:pro'})
+
+def register(req):
+    if req.method=="POST":
+        name=req.POST['name']
+        email=req.POST['email']
+        password=req.POST['password']
+        try:
+            data=User.objects.create_user(first_name=name,email=email,password=password,username=email)
+            data.save()
+            return redirect(shop_login)
+        except:
+            messages.warning(req,'email exists')
+            return redirect(register)
+    else:
+        return render(req,'user/register.html')
+
+
+# def buy_product(req,id):
+#     product=Product.objects.get(pk=id)
+#     user=User.objects.get(username=req.session['user'])
+#     price=Product.offer_price
+#     data=Buy.objects.create(user,product,price=price)
+    # data.save()
+    # return redirect(user_home)
 
 
 
